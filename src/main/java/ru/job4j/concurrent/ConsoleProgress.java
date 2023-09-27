@@ -1,15 +1,15 @@
 package ru.job4j.concurrent;
 
-import java.util.Iterator;
-
 public class ConsoleProgress implements Runnable {
 
     @Override
     public void run() {
-        Iterator<Character> symbol = symbolIt();
+        var process = new char[] {'-', '\\', '|', '/'};
+        int i = 0;
         try {
             while (!Thread.currentThread().isInterrupted()) {
-                System.out.print("\r load: " + symbol.next());
+                System.out.print("\r load: " + process[i++]);
+                i = i == process.length  ? 0 : i;
                 Thread.sleep(500);
             }
         } catch (InterruptedException e) {
@@ -18,35 +18,10 @@ public class ConsoleProgress implements Runnable {
         }
     }
 
-    public static void main(String[] args) {
-        try {
-            Thread progress = new Thread(new ConsoleProgress());
-            progress.start();
-            Thread.sleep(5000);
-            progress.interrupt();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private Iterator<Character> symbolIt() {
-
-        return new Iterator<>() {
-            private final char[] process = new char[] {'-', '\\', '|', '/'};
-            private int start = 0;
-
-            @Override
-            public boolean hasNext() {
-                return true;
-            }
-
-            @Override
-            public Character next() {
-                if (start > 3) {
-                    start = 0;
-                }
-                return process[start++];
-            }
-        };
+    public static void main(String[] args) throws InterruptedException {
+        Thread progress = new Thread(new ConsoleProgress());
+        progress.start();
+        Thread.sleep(5000);
+        progress.interrupt();
     }
 }
