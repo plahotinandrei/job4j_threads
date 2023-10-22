@@ -6,32 +6,37 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.Optional;
 
 public class Wget implements Runnable {
     private final String url;
     private final int speed;
+    private final String filename;
 
-    public Wget(String url, int speed) {
+    public Wget(String url, int speed, String filename) {
         this.url = url;
         this.speed = speed;
+        this.filename = filename;
     }
 
     @Override
     public void run() {
-        var filename = getFilenameFromURL(url).orElse("tmp.txt");
         var file = new File(filename);
         try (var in = new URL(url).openStream();
              var out = new FileOutputStream(file)) {
             var dataBuffer = new byte[512];
             int bytesRead;
-            var downloadAt = System.nanoTime();
+            int bitesAll = 0;
+            var downloadAt = System.currentTimeMillis();
             while ((bytesRead = in.read(dataBuffer, 0, dataBuffer.length)) != -1) {
-                downloadAt = System.nanoTime();
+                bitesAll += bytesRead;
                 out.write(dataBuffer, 0, bytesRead);
-                long realSpeed = bytesRead * 1000000L / (System.nanoTime() - downloadAt);
-                if (realSpeed > speed) {
-                    Thread.sleep(realSpeed / speed);
+                if (bitesAll > speed) {
+                    long pause = 1000L - (System.currentTimeMillis() - downloadAt);
+                    if (pause > 0) {
+                        Thread.sleep(pause);
+                    }
+                    downloadAt = System.currentTimeMillis();
+                    bitesAll = 0;
                 }
             }
         } catch (IOException e) {
@@ -42,38 +47,33 @@ public class Wget implements Runnable {
     }
 
     private static void validate(String[] args) {
-        if (args.length != 2) {
+        String filePattern = "^.*\\.[^.]{3,}$";
+        if (args.length != 3) {
             throw new IllegalArgumentException("Not found all required arguments");
         }
         try {
-            new URL(args[0]).toURI();
+            URL url = new URL(args[0]);
+            if (!(new File(url.getPath())).getName().matches(filePattern)) {
+                throw new IllegalArgumentException("This url does not contain fail");
+            }
+            url.toURI();
         } catch (URISyntaxException | MalformedURLException exception) {
             throw new IllegalArgumentException("Invalid url");
-        }
-        if (getFilenameFromURL(args[0]).isEmpty()) {
-            throw new IllegalArgumentException("This url does not contain fail");
         }
         if (Integer.parseInt(args[1]) <= 0)  {
             throw new IllegalArgumentException("Invalid speed");
         }
-    }
-
-    private static Optional<String> getFilenameFromURL(String url) {
-        Optional<String> rsl = Optional.empty();
-        try {
-            String name = new File(new URL(url).getPath()).getName();
-            if (name.matches("^.*\\.[^.]{3,}$")) {
-                rsl = Optional.of(name);
-            }
-        } catch (MalformedURLException ignored) { }
-        return rsl;
+        if (!args[2].matches(filePattern)) {
+            throw new IllegalArgumentException("Invalid filename");
+        }
     }
 
     public static void main(String[] args) throws InterruptedException {
         validate(args);
         String url = args[0];
         int speed = Integer.parseInt(args[1]);
-        Thread wget = new Thread(new Wget(url, speed));
+        String filename = args[2];
+        Thread wget = new Thread(new Wget(url, speed, filename));
         wget.start();
         wget.join();
     }
