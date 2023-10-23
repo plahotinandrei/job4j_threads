@@ -30,7 +30,7 @@ public class Wget implements Runnable {
             while ((bytesRead = in.read(dataBuffer, 0, dataBuffer.length)) != -1) {
                 bitesAll += bytesRead;
                 out.write(dataBuffer, 0, bytesRead);
-                if (bitesAll > speed) {
+                if (bitesAll >= speed) {
                     long pause = 1000L - (System.currentTimeMillis() - downloadAt);
                     if (pause > 0) {
                         Thread.sleep(pause);
