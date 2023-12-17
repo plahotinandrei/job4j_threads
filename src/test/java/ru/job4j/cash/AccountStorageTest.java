@@ -15,6 +15,13 @@ class AccountStorageTest {
     }
 
     @Test
+    void whenAddRepeatedAccount() {
+        var storage = new AccountStorage();
+        storage.add(new Account(1, 100));
+        assertThat(storage.add(new Account(1, 200))).isFalse();
+    }
+
+    @Test
     void whenUpdate() {
         var storage = new AccountStorage();
         storage.add(new Account(1, 100));
@@ -22,6 +29,12 @@ class AccountStorageTest {
         var firstAccount = storage.getById(1)
                 .orElseThrow(() -> new IllegalStateException("Not found account by id = 1"));
         assertThat(firstAccount.amount()).isEqualTo(200);
+    }
+
+    @Test
+    void whenUpdateNotExistAccount() {
+        var storage = new AccountStorage();
+        assertThat(storage.update(new Account(1, 200))).isFalse();
     }
 
     @Test

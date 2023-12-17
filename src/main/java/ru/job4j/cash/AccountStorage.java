@@ -14,15 +14,13 @@ public class AccountStorage {
 
     public boolean add(Account account) {
         synchronized (accounts) {
-            accounts.put(account.id(), account);
+            return accounts.putIfAbsent(account.id(), account) == null;
         }
-        return true;
     }
 
     public boolean update(Account account) {
         synchronized (accounts) {
-            Account prevAccount = accounts.get(account.id());
-            return accounts.replace(account.id(), prevAccount, account);
+            return accounts.replace(account.id(), account) != null;
         }
     }
 
@@ -41,9 +39,11 @@ public class AccountStorage {
     public boolean transfer(int fromId, int toId, int amount) {
         boolean rsl = false;
         synchronized (accounts) {
-            if (getById(fromId).isPresent() && getById(toId).isPresent() && accounts.get(fromId).amount() >= amount) {
-                accounts.computeIfPresent(fromId, (k, v) -> new Account(k, v.amount() - amount));
-                accounts.computeIfPresent(toId, (k, v) -> new Account(k, v.amount() + amount));
+            Optional<Account> fromAccount = getById(fromId);
+            Optional<Account> toAccount = getById(toId);
+            if (fromAccount.isPresent() && toAccount.isPresent() &&  fromAccount.get().amount() >= amount) {
+                update(new Account(fromId, fromAccount.get().amount() - amount));
+                update(new Account(toId, toAccount.get().amount() + amount));
                 rsl = true;
             }
         }
