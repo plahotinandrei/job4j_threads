@@ -8,25 +8,30 @@ import java.util.stream.IntStream;
 public class ThreadPool {
     private final List<Thread> threads = new LinkedList<>();
     private final SimpleBlockingQueue<Runnable> tasks = new SimpleBlockingQueue<>();
-    private boolean isStopped = false;
 
     public ThreadPool() {
         int size = Runtime.getRuntime().availableProcessors();
         IntStream.range(0, size).forEach((i) -> {
-            Thread thread = new PoolWorker(tasks);
+            Thread thread = new Thread(() -> {
+                while (!Thread.currentThread().isInterrupted()) {
+                    try {
+                        Runnable task = tasks.poll();
+                        task.run();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            });
             threads.add(thread);
             thread.start();
         });
     }
 
     public void work(Runnable job) throws InterruptedException {
-        if (!isStopped) {
-            tasks.offer(job);
-        }
+        tasks.offer(job);
     }
 
     public void shutdown() {
-        isStopped = true;
         threads.forEach(Thread::interrupt);
     }
 
